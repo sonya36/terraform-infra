@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "state_bucket_name" {
   description = "Globally-unique S3 bucket name for Terraform state"
   type        = string
-  default     = "cloudtech-terraform-state-664418970145"
+  default     = "cloudtech-terraform-state-soniya"
 }
 
 variable "lock_table_name" {
