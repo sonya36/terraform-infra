@@ -9,29 +9,30 @@ terraform {
 }
 
 provider "aws" {
-  region = var.region
+  region = var.aws_region
 }
 
 module "vpc" {
-  source               = "../../modules/vpc"
-  env                  = var.env
-  vpc_cidr             = var.vpc_cidr
-  public_subnet_cidrs  = var.public_subnet_cidrs
-  private_subnet_cidrs = var.private_subnet_cidrs
+  source              = "../../modules/vpc"
+  name                = "vpc-${var.env}"
+  cidr_block          = var.vpc_cidr
+  azs                 = var.azs
+  public_subnet_cidrs = var.public_subnets
+  tags                = var.tags
 }
 
-module "iam" {
-  source = "../../modules/iam"
-  env    = var.env
+module "s3" {
+  source      = "../../modules/s3"
+  bucket_name = var.app_bucket_name
+  tags        = var.tags
 }
 
-module "ecs" {
-  source = "../../modules/ecs"
-  env    = var.env
-
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-
-  ecs_task_execution_role_arn = module.iam.ecs_task_execution_role_arn
-  ecs_task_role_arn           = module.iam.ecs_task_role_arn
+module "ec2" {
+  source        = "../../modules/ec2"
+  name          = "web-${var.env}"
+  vpc_id        = module.vpc.vpc_id
+  subnet_id     = module.vpc.public_subnet_ids[0]
+  ami_id        = var.ami_id
+  instance_type = var.instance_type
+  tags          = var.tags
 }
