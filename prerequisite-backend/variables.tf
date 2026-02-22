@@ -1,26 +1,16 @@
-variable "aws_region" {
-  description = "AWS region to create backend resources in"
-  type        = string
-  default     = "us-east-1"
-}
+variable "aws_region" { type = string }
 
 variable "state_bucket_name" {
-  description = "Globally-unique S3 bucket name for Terraform state"
   type        = string
-  default     = "cloudtech-terraform-state-soniya"
+  description = "S3 bucket for terraform remote state"
 }
 
 variable "lock_table_name" {
-  description = "DynamoDB table name for Terraform state locking"
   type        = string
-  default     = "terraform-locks"
+  description = "DynamoDB table for terraform state locking"
 }
 
 variable "tags" {
-  description = "Tags to apply to backend resources"
-  type        = map(string)
-  default = {
-    ManagedBy = "Terraform"
-    Purpose   = "terraform-backend"
-  }
+  type    = map(string)
+  default = {}
 }
