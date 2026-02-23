@@ -1,72 +1,46 @@
 pipeline {
   agent any
-  options { disableConcurrentBuilds(); timestamps() }
 
-  environment {
-    TF_IN_AUTOMATION = "true"
+  parameters {
+    choice(name: 'ENV', choices: ['qa', 'dev', 'prod'], description: 'Target environment')
+    booleanParam(name: 'APPLY', defaultValue: false, description: 'If true, apply changes after plan')
   }
 
   stages {
-    stage("Select Environment") {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Init') {
       steps {
-        script {
-          env.PLAN_ONLY = "false"
-
-          if (env.CHANGE_ID) {
-            // PR build: plan only (use dev folder)
-            env.ENV_DIR = "envs/dev"
-            env.PLAN_ONLY = "true"
-          } else if (env.BRANCH_NAME == "develop") {
-            env.ENV_DIR = "envs/dev"
-          } else if (env.BRANCH_NAME.startsWith("release/")) {
-            env.ENV_DIR = "envs/qa"
-          } else if (env.BRANCH_NAME == "main") {
-            env.ENV_DIR = "envs/prod"
-          } else {
-            env.ENV_DIR = "envs/dev"
-            env.PLAN_ONLY = "true"
-          }
-
-          echo "BRANCH=${env.BRANCH_NAME} ENV_DIR=${env.ENV_DIR} PLAN_ONLY=${env.PLAN_ONLY}"
+        dir("envs/${params.ENV}") {
+          sh "terraform --version"
+          sh "terraform init -input=false"
         }
       }
     }
 
-    stage("Terraform fmt/validate") {
+    stage('Plan') {
       steps {
-        sh """
-          cd ${ENV_DIR}
-          terraform fmt -check -recursive
-          terraform init -input=false
-          terraform validate
-        """
+        dir("envs/${params.ENV}") {
+          sh "terraform plan -input=false -out=tfplan"
+        }
       }
     }
 
-    stage("Terraform plan") {
+    stage('Approve Apply') {
+      when { expression { return params.APPLY == true } }
       steps {
-        sh """
-          cd ${ENV_DIR}
-          terraform plan -input=false -var-file=terraform.tfvars -out=tfplan
-        """
-        archiveArtifacts artifacts: "${ENV_DIR}/tfplan", fingerprint: true
+        input message: "Apply Terraform for ${params.ENV}? (Be careful with prod)"
       }
     }
 
-    stage("Prod approval") {
-      when { expression { return env.ENV_DIR == "envs/prod" && env.PLAN_ONLY != "true" } }
+    stage('Apply') {
+      when { expression { return params.APPLY == true } }
       steps {
-        input message: "Apply Terraform to PROD?", ok: "Apply"
-      }
-    }
-
-    stage("Terraform apply") {
-      when { expression { return env.PLAN_ONLY != "true" } }
-      steps {
-        sh """
-          cd ${ENV_DIR}
-          terraform apply -input=false -auto-approve tfplan
-        """
+        dir("envs/${params.ENV}") {
+          sh "terraform apply -input=false tfplan"
+        }
       }
     }
   }

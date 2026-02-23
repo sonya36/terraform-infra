@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket         = "cloudtech-terraform-state-soniya"
-    key            = "soniya-teams/prod/terraform.tfstate"
+    key            = "prod/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "terraform-locks"
     encrypt        = true
