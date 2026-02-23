@@ -23,9 +23,10 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_subnet" "public" {
-  for_each                = toset(range(length(var.public_subnet_cidrs)))
+  for_each = { for idx, cidr in var.public_subnet_cidrs : idx => cidr }
+
   vpc_id                  = aws_vpc.this.id
-  cidr_block              = var.public_subnet_cidrs[each.key]
+  cidr_block              = each.value
   availability_zone       = var.azs[each.key]
   map_public_ip_on_launch = true
 
